@@ -17,7 +17,7 @@ export const eject = async (shacl: string, prefixes: { [key: string]: string }, 
         query = query.replaceAll(match[0], '|| (LANG(?o) IN(${langCodes.map(langCode => `"${langCode}"`).join(", ")})')
     }
 
-    query = query.replace('<urn:replace>', '${iris.map(iri => `<${iri}>`).join(",")}')
+    query = query.replace(`VALUES ?this {\n        <urn:replace>\n      }`, '${iris.map(iri => `${iris.length ? `VALUES ?this { <${iri}>`).join(",")}` : ""}')
     query = query.replace('OFFSET 333', 'OFFSET ${offset}')
     query = query.replace('LIMIT 999', 'LIMIT ${limit}')
 
