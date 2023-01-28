@@ -76,4 +76,36 @@ export const prefixes = {
   "type": "rdf:type"
 }
 
-export const model = new Model<selfPhilosopher>('https://dbpedia.org/sparql', createQuery, prefixes, 'dbo', import.meta)
+export const meta = {
+  "selfPhilosopher": {
+    "label": {
+      "multiple": false,
+      "optional": false,
+      "type": "string"
+    },
+    "thumbnail": {
+      "multiple": false,
+      "optional": false,
+      "type": "string"
+    },
+    "birthPlace": {
+      "multiple": true,
+      "optional": true,
+      "type": "selfLocation"
+    },
+    "birthDate": {
+      "multiple": false,
+      "optional": true,
+      "type": "Date"
+    }
+  },
+  "selfLocation": {
+    "label": {
+      "multiple": false,
+      "optional": false,
+      "type": "string"
+    }
+  }
+}
+
+export const model = new Model<selfPhilosopher>('https://dbpedia.org/sparql', createQuery, prefixes, 'dbo', meta)

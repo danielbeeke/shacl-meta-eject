@@ -15,7 +15,7 @@ export type RdfJsonNode = {
     [key: string]: Array<RdfJsonTerm | RdfJsonNode>
 }
 
-export type Types = { [key: string]: { [key: string]: { multiple: boolean, optional: boolean, type: string } } }
+export type Meta = { [key: string]: { [key: string]: { multiple: boolean, optional: boolean, type: string } } }
 
 export class Model<T> {
 
@@ -23,14 +23,13 @@ export class Model<T> {
     private endpoint: string
     private prefixes: Map<string, string> = new Map()
     private vocab: string
-    private metaUrl: string
-    private types: { [key: string]: { [key: string]: { multiple: boolean, optional: boolean, type: string } } } = {}
+    private meta: Meta
 
     constructor (endpoint: string, createQuery: CreateQuery<T>, predicatePrefixes: { [key: string]: string }, vocab: string, meta: any) {
         this.endpoint = endpoint
         this.createQuery = createQuery
         this.vocab = vocab
-        this.metaUrl = meta.url
+        this.meta = meta
 
         for (const [alias, predicate] of Object.entries(predicatePrefixes)) this.prefixes.set(predicate, alias)
     }
@@ -44,9 +43,6 @@ export class Model<T> {
         body.set('query', query)
 
         this.extractPrefixes(query)
-        const ejectedFileResponse = await fetch(this.metaUrl)
-        const ejectedFile = await ejectedFileResponse.text()
-        this.types = this.extractTypes(ejectedFile)
 
         const response = await fetch(this.endpoint, {
             body,
@@ -71,36 +67,6 @@ export class Model<T> {
         return typeof input1 === 'string' ? results[0] as T : results as Array<T>
     }
 
-    extractTypes (ejectedFile: string) {
-        const types: Types = {}
-
-        let inType: false | string = false
-        const lines = ejectedFile.split('\n')
-
-        for (const line of lines) {
-            if (line.trim() === '}' && inType) {
-                inType = false
-            }
-
-            if (inType) {
-                if (!types[inType]) types[inType] = {}
-                const [property, type] = line.split(': ')
-
-                types[inType][property.replace('?', '').trim()] = { 
-                    multiple: type.includes('Array'), 
-                    optional: property.includes('?'),
-                    type: type.replaceAll(';', '').replaceAll('Array<', '').replaceAll('>', '')
-                }
-            }
-
-            if (line.includes('export type')) {
-                inType = line.trim().split(' ')[2].trim()
-            }
-        }
-
-        return types
-    }
-
     rdfTermValueToTypedVariable (value: RdfJsonTerm) {
         if (value.datatype === 'http://www.w3.org/2001/XMLSchema#date') return new Date(value.value)
         if (value.datatype === 'http://www.w3.org/2001/XMLSchema#integer') return parseInt(value.value)
@@ -112,8 +78,8 @@ export class Model<T> {
     }
     
     convertRdfGraphToJson (graph: RdfJsonNode, currentTypeName = '') {
-        if (!currentTypeName) currentTypeName = Object.keys(this.types)[0]
-        const currentType = this.types[currentTypeName]
+        if (!currentTypeName) currentTypeName = Object.keys(this.meta)[0]
+        const currentType = this.meta[currentTypeName]
 
         const returnGraph: any = {}
 
@@ -124,7 +90,7 @@ export class Model<T> {
 
             const castedValues = values.map(value => {
                 if (value.type) return this.rdfTermValueToTypedVariable(value as RdfJsonTerm)
-                const nestedType = this.types[currentTypeName]?.[compactedPredicate]?.type
+                const nestedType = this.meta[currentTypeName]?.[compactedPredicate]?.type
                 return this.convertRdfGraphToJson(value as RdfJsonNode, nestedType)
             })
 

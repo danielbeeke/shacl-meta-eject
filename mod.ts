@@ -1,6 +1,38 @@
 import { ShaclModel, Converter } from './deps.ts'
 import outdent from 'https://deno.land/x/outdent/mod.ts';
 
+const extractTypes = (ejectedFile: string) => {
+  const types: Types = {}
+
+  let inType: false | string = false
+  const lines = ejectedFile.split('\n')
+
+  for (const line of lines) {
+      if (line.trim() === '}' && inType) {
+          inType = false
+      }
+
+      if (inType) {
+          if (!types[inType]) types[inType] = {}
+          const [property, type] = line.split(': ')
+
+          types[inType][property.replace('?', '').trim()] = { 
+              multiple: type.includes('Array'), 
+              optional: property.includes('?'),
+              type: type.replaceAll(';', '').replaceAll('Array<', '').replaceAll('>', '')
+          }
+      }
+
+      if (line.includes('export type')) {
+          inType = line.trim().split(' ')[2].trim()
+      }
+  }
+
+  return types
+}
+
+export type Types = { [key: string]: { [key: string]: { multiple: boolean, optional: boolean, type: string } } }
+
 export const eject = async (shacl: string, prefixes: { [key: string]: string }, vocab: string, endpoint: string, modelImportPath = './Model.ts') => {
     const model = await new ShaclModel({ endpoint: '', shacl, vocab, prefixes })
 
@@ -11,6 +43,10 @@ export const eject = async (shacl: string, prefixes: { [key: string]: string }, 
 
     const converter = new Converter()
     const types = await converter.transform(shacl, vocab, prefixes)
+
+    const metaTypes = extractTypes(types.map(type => type.text).join('\n'))
+    
+  console.log(metaTypes)
 
     let query = sourceQuery
     for (const match of matches ?? []) {
@@ -38,7 +74,9 @@ export const eject = async (shacl: string, prefixes: { [key: string]: string }, 
 
     export const prefixes = ${JSON.stringify(prefixes, null, 2)}
 
-    export const model = new Model<${types[0].name}>('${endpoint}', createQuery, prefixes, '${vocab}', import.meta)
+    export const meta = ${JSON.stringify(metaTypes, null, 2)}
+
+    export const model = new Model<${types[0].name}>('${endpoint}', createQuery, prefixes, '${vocab}', meta)
     `
 
     return fileContents
