@@ -1,5 +1,5 @@
 import { ShaclModel, Converter } from './deps.ts'
-import outdent from 'http://deno.land/x/outdent/mod.ts';
+import outdent from 'https://deno.land/x/outdent/mod.ts';
 
 export const eject = async (shacl: string, prefixes: { [key: string]: string }, vocab: string, endpoint: string, modelImportPath = './Model.ts') => {
     const model = await new ShaclModel({ endpoint: '', shacl, vocab, prefixes })
