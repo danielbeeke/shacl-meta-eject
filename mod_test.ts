@@ -7,8 +7,8 @@ Deno.test('Output of get', async () => {
     
     Deno.writeTextFileSync('./models/Person.ts', fileContents)
     
-    // const { model } = await import('./models/Person.ts')
+    const { model } = await import('./models/Person.ts')
     
-    // const soren = await model.get('http://dbpedia.org/resource/Søren_Kierkegaard', ['en'])
-    // console.log(soren)
+    const soren = await model.get('http://dbpedia.org/resource/Søren_Kierkegaard', ['en'])
+    console.log(soren)
 })

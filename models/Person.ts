@@ -21,7 +21,7 @@ export function createQuery (input1: string | Array<string> | number = 10, input
       {
         SELECT ?this WHERE {
           ?this rdf:type dbo:Philosopher.
-          ${iris.map(iri => `${iris.length ? `VALUES ?this { <${iri}>`).join(",")}` : ""}
+          ${iris.length ? `VALUES ?this { ${iris.map(iri => `<${iri}>`).join(", ")} }` : ""}
         }
         OFFSET ${offset}
         LIMIT ${limit}
