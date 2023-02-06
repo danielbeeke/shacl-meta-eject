@@ -1,5 +1,5 @@
 import { ShaclModel, Converter } from './deps.ts'
-import outdent from 'https://deno.land/x/outdent/mod.ts';
+import outdent from 'https://deno.land/x/outdent@v0.8.0/mod.ts';
 
 const extractTypes = (ejectedFile: string) => {
   const types: Types = {}
@@ -46,8 +46,6 @@ export const eject = async (shacl: string, prefixes: { [key: string]: string }, 
 
     const metaTypes = extractTypes(types.map(type => type.text).join('\n'))
     
-  console.log(metaTypes)
-
     let query = sourceQuery
     for (const match of matches ?? []) {
         query = query.replaceAll(match[0], '|| (LANG(?o) IN(${langCodes.map(langCode => `"${langCode}"`).join(", ")})')
