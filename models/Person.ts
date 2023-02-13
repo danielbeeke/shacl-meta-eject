@@ -1,9 +1,9 @@
 
 import { Model } from '../ShaclModel.ts'
 
-export function createQuery (input1: string | Array<string> | number = 10, input2: number | Array<string> = 0, input3: Array<string> = []): string {
+export function createQuery (input1: string | Array<string> | number = 0, input2: number | Array<string> = 0, input3: Array<string> = []): string {
   const iris = Array.isArray(input1) ? input1 : (typeof input1 === 'string' ? [input1] : [])
-  const limit = typeof input1 === 'number' ? input1 : 10
+  const limit = typeof input1 === 'number' ? input1 : 0
   const offset = typeof input2 === 'number' ? input2 : 0
   const langCodes: Array<string> = input3.length ? input3 : (Array.isArray(input2) ? input2 : [])
 
@@ -17,20 +17,18 @@ export function createQuery (input1: string | Array<string> | number = 10, input
       ?this <urn:shacl-meta-sparql> <urn:shacl-meta-sparql>.
     }
     WHERE {
-      ?s ?p ?o.
-      {
+    ${iris.length ? `VALUES ?this { ${iris.map(iri => `<${iri}>`).join(", ")} }` : `  {
         SELECT ?this WHERE {
           ?this rdf:type dbo:Philosopher.
-          ${iris.length ? `VALUES ?this { ${iris.map(iri => `<${iri}>`).join(", ")} }` : ""}
+          
         }
-        OFFSET ${offset}
-        LIMIT ${limit}
-      }
-      { BIND(?this AS ?s) }
-      UNION
+        ${offset ? `OFFSET ${offset}` : ``}
+        ${limit ? `LIMIT ${limit}` : ``}
+      }`}
+      ?s ?p ?o.
       {
         ?this ?p ?o.
-        FILTER(?this = ?s)
+        BIND(?this AS ?s)
         VALUES ?p {
           rdfs:label
           dbo:thumbnail
@@ -60,14 +58,14 @@ export function createQuery (input1: string | Array<string> | number = 10, input
 }
 
 export type selfPhilosopher = {
-  label: string;
+  'rdfs:label': string;
   thumbnail: string;
   birthPlace?: Array<selfLocation>;
   birthDate?: Date;
 }
 
 export type selfLocation = {
-  label: string;
+  'rdfs:label': string;
 }
 
 
@@ -78,7 +76,7 @@ export const prefixes = {
 
 export const meta = {
   "selfPhilosopher": {
-    "label": {
+    "rdfs:label": {
       "multiple": false,
       "optional": false,
       "type": "string"
@@ -100,7 +98,7 @@ export const meta = {
     }
   },
   "selfLocation": {
-    "label": {
+    "rdfs:label": {
       "multiple": false,
       "optional": false,
       "type": "string"

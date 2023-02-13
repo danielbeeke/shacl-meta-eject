@@ -1,5 +1,4 @@
-import { ShaclModel, Converter } from './deps.ts'
-import outdent from 'https://deno.land/x/outdent@v0.8.0/mod.ts';
+import { ShaclModel, Converter, outdent } from './deps.ts'
 
 const extractTypes = (ejectedFile: string) => {
   const types: Types = {}
@@ -16,7 +15,7 @@ const extractTypes = (ejectedFile: string) => {
           if (!types[inType]) types[inType] = {}
           const [property, type] = line.split(': ')
 
-          types[inType][property.replace('?', '').trim()] = { 
+          types[inType][property.replace('?', '').trim().replace(/'/g, '')] = { 
               multiple: type.includes('Array'), 
               optional: property.includes('?'),
               type: type.replaceAll(';', '').replaceAll('Array<', '').replaceAll('>', '')
@@ -24,7 +23,7 @@ const extractTypes = (ejectedFile: string) => {
       }
 
       if (line.includes('export type')) {
-          inType = line.trim().split(' ')[2].trim()
+          inType = line.replace(/'/g, '').trim().split(' ')[2].trim()
       }
   }
 
@@ -51,17 +50,36 @@ export const eject = async (shacl: string, prefixes: { [key: string]: string }, 
         query = query.replaceAll(match[0], '|| (LANG(?o) IN(${langCodes.map(langCode => `"${langCode}"`).join(", ")})')
     }
 
-    query = query.replace(`VALUES ?this {\n        <urn:replace>\n      }`, '${iris.length ? `VALUES ?this { ${iris.map(iri => `<${iri}>`).join(", ")} }` : ""}')
-    query = query.replace('OFFSET 333', 'OFFSET ${offset}')
-    query = query.replace('LIMIT 999', 'LIMIT ${limit}')
+    let startIndex = 0
+    let endIndex = 0
+    const lines = query.split('\n')
+    for (const [index, line] of lines.entries()) {
+        if (line.includes('SELECT ?this WHERE')) startIndex = index - 1
+        if (line.includes('LIMIT 999')) endIndex = index + 1
+    }
+
+    if (startIndex && endIndex) {
+        const innerQueryLines = lines.filter((line, index) => index >= startIndex && index <= endIndex)
+        let innerQuery = innerQueryLines.join('\n')
+
+        innerQuery = innerQuery.replace(`VALUES ?this {\n        <urn:replace>\n      }`, '')
+        innerQuery = innerQuery.replace('OFFSET 333', '${offset ? `OFFSET ${offset}` : ``}')
+        innerQuery = innerQuery.replace('LIMIT 999', '${limit ? `LIMIT ${limit}` : ``}')
+    
+        const queryLines = lines.filter((_line, index) => index < startIndex || index > endIndex)
+
+        queryLines.splice(startIndex, 0, '${iris.length ? `VALUES ?this { ${iris.map(iri => `<${iri}>`).join(", ")} }` : `' + innerQuery + '`}')
+
+        query = queryLines.join('\n')
+    }    
 
     const fileContents = outdent`
 
     import { Model } from '${modelImportPath}'
 
-    export function createQuery (input1: string | Array<string> | number = 10, input2: number | Array<string> = 0, input3: Array<string> = []): string {
+    export function createQuery (input1: string | Array<string> | number = 0, input2: number | Array<string> = 0, input3: Array<string> = []): string {
       const iris = Array.isArray(input1) ? input1 : (typeof input1 === 'string' ? [input1] : [])
-      const limit = typeof input1 === 'number' ? input1 : 10
+      const limit = typeof input1 === 'number' ? input1 : 0
       const offset = typeof input2 === 'number' ? input2 : 0
       const langCodes: Array<string> = input3.length ? input3 : (Array.isArray(input2) ? input2 : [])
 

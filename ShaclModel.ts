@@ -54,6 +54,8 @@ export class Model<T> {
 
         const returnObject: any = {}
 
+        console.log(query)
+
         const mainSubjects = Object.entries(graphs).filter(([_iri, graph]: [string, any]) => graph['urn:shacl-meta-sparql'])
         const iris = mainSubjects.map(([iri]: [string, any]) => iri)
 
@@ -96,7 +98,7 @@ export class Model<T> {
 
             if (predicate === 'urn:shacl-meta-sparql') continue
 
-            returnGraph[compactedPredicate] = currentProperty.multiple ? castedValues : castedValues[0]
+            returnGraph[compactedPredicate] = currentProperty?.multiple ? castedValues : castedValues[0]
         }
 
         return returnGraph
